@@ -19,6 +19,11 @@ CRdpGamepadChannel::RdpProtocolHandlerFunction CRdpGamepadChannel::sProtocolHand
 	nullptr,										// GetStateResponse
 	nullptr,										// SetStateResponse
 	nullptr,										// GetCapabilitiesResponse
+	&CRdpGamepadChannel::HandleGetStateDS4,			// GetStateRequestDS4,
+	&CRdpGamepadChannel::HandlePollStateDS4,		// PollStateRequestDS4,
+	&CRdpGamepadChannel::HandleSetStateDS4,			// SetStateRequestDS4,
+	nullptr,										// GetStateResponseDS4,
+	nullptr,										// SetStateResponseDS4,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -160,5 +165,49 @@ HRESULT CRdpGamepadChannel::SendControllerState(DWORD dwUserIndex)
 	DWORD result = XInputGetState(dwUserIndex, &state);
 
 	auto response = RdpGamepad::RdpGetStateResponse::MakeResponse(dwUserIndex, result, state);
+	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
+}
+
+
+HRESULT CRdpGamepadChannel::HandleGetStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mGetStateRequest;
+
+	return SendControllerStateDS4(request.mUserIndex);
+}
+
+HRESULT CRdpGamepadChannel::HandlePollStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mPollStateRequest;
+
+	HRESULT hr = SendControllerStateDS4(request.mUserIndex);
+	if (SUCCEEDED(hr))
+	{
+		DWORD dwUserIndex = request.mUserIndex;
+		TimerManager::Get().SetTimer(mTimerPoll, [dwUserIndex, this]() { SendControllerState(dwUserIndex); }, std::chrono::seconds(1) / 30, true);
+		TimerManager::Get().SetTimer(mTimerPollTimeout, [this]() { TimerManager::Get().ClearTimer(mTimerPoll); }, std::chrono::seconds(2), false);
+	}
+
+	return S_OK;
+}
+
+HRESULT CRdpGamepadChannel::HandleSetStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mSetStateRequestDS4;
+
+	auto ret = PadSetVibration(request.mVibration);
+	DWORD result = (ret) ? S_OK : E_FAIL;
+
+	auto response = RdpGamepad::RdpSetStateResponseDS4::MakeResponse(request.mUserIndex, result);
+	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
+}
+
+HRESULT CRdpGamepadChannel::SendControllerStateDS4(DWORD dwUserIndex)
+{
+	PadState state;
+	auto ret = PadGetState(state);
+	DWORD result = (ret) ? S_OK : E_FAIL;
+
+	auto response = RdpGamepad::RdpGetStateResponseDS4::MakeResponse(dwUserIndex, result, state);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
 }

@@ -12,6 +12,7 @@
 #include <wtsapi32.h>
 #include <type_traits>
 #include <cstring>
+#include <ds4_pad.h>
 
 #pragma comment(lib, "wtsapi32.lib")
 
@@ -37,6 +38,12 @@ namespace RdpGamepad
 		GetStateResponse,			// Response with the XINPUT_STATE for the controller
 		SetStateResponse,			// Response with the result of XInputSetState
 		GetCapabilitiesResponse,	// Response with the XINPUT_CAPABILITIES of the controller
+
+		GetStateRequestDS4,
+		PollStateRequestDS4,
+		SetStateRequestDS4,
+		GetStateResponseDS4,
+		SetStateResponseDS4,
 
 		MessageTypeCount
 	};
@@ -151,6 +158,79 @@ namespace RdpGamepad
 		}
 	};
 
+	//----------
+	struct RdpGetStateRequestDS4 : RdpProtocolHeader
+	{
+		static RdpGetStateRequestDS4 MakeRequest(DWORD userIndex)
+		{
+			RdpGetStateRequestDS4 retVal;
+			retVal.mMessageType = RdpMessageType::GetStateRequestDS4;
+			retVal.mMessageSize = sizeof(retVal);
+			retVal.mUserIndex   = userIndex;
+			return retVal;
+		}
+	};
+
+	struct RdpPollStateRequestDS4 : RdpProtocolHeader
+	{
+		static RdpPollStateRequestDS4 MakeRequest(DWORD userIndex)
+		{
+			RdpPollStateRequestDS4 retVal;
+			retVal.mMessageType = RdpMessageType::PollStateRequestDS4;
+			retVal.mMessageSize = sizeof(retVal);
+			retVal.mUserIndex   = userIndex;
+			return retVal;
+		}
+	};
+
+	struct RdpGetStateResponseDS4 : RdpProtocolHeader
+	{
+		DWORD               mResult;
+		PadState			mState;
+
+		static RdpGetStateResponseDS4 MakeResponse(DWORD userIndex, DWORD result, const PadState& state)
+		{
+			RdpGetStateResponseDS4 retVal;
+			retVal.mMessageType = RdpMessageType::GetStateResponseDS4;
+			retVal.mMessageSize = sizeof(retVal);
+			retVal.mUserIndex   = userIndex;
+			retVal.mResult      = result;
+			retVal.mState       = state;
+			return retVal;
+		}
+	};
+
+	struct RdpSetStateRequestDS4 : RdpProtocolHeader
+	{
+		PadVibrationParam    mVibration;
+
+		static RdpSetStateRequestDS4 MakeRequest(DWORD userIndex, const PadVibrationParam& vibration)
+		{
+			RdpSetStateRequestDS4 retVal;
+			retVal.mMessageType = RdpMessageType::SetStateRequestDS4;
+			retVal.mMessageSize = sizeof(retVal);
+			retVal.mUserIndex   = userIndex;
+			retVal.mVibration   = vibration;
+			return retVal;
+		}
+	};
+
+	struct RdpSetStateResponseDS4 : RdpProtocolHeader
+	{
+		DWORD               mResult;
+
+		static RdpSetStateResponseDS4 MakeResponse(DWORD userIndex, DWORD result)
+		{
+			RdpSetStateResponseDS4 retVal;
+			retVal.mMessageType = RdpMessageType::SetStateResponseDS4;
+			retVal.mMessageSize = sizeof(retVal);
+			retVal.mUserIndex   = userIndex;
+			retVal.mResult      = result;
+			return retVal;
+		}
+	};
+
+
 	const size_t kRdpMessageSizes[] =
 	{
 		sizeof(RdpProtocolHeader),           // Hearbeat
@@ -161,6 +241,11 @@ namespace RdpGamepad
 		sizeof(RdpGetStateResponse),         // GetStateResponse
 		sizeof(RdpSetStateResponse),         // SetStateResponse
 		sizeof(RdpGetCapabilitiesResponse),  // GetCapabilitiesResponse
+		sizeof(RdpGetStateRequestDS4),		 // GetStateRequestDS4,
+		sizeof(RdpPollStateRequestDS4),		// PollStateRequestDS4,
+		sizeof(RdpPollStateRequestDS4),		// SetStateRequestDS4,
+		sizeof(RdpGetStateResponseDS4),		// GetStateResponseDS4,
+		sizeof(RdpSetStateResponseDS4),		// SetStateResponseDS4,
 	};
 	static_assert(sizeof(kRdpMessageSizes)/sizeof(kRdpMessageSizes[0]) == RdpMessageType::MessageTypeCount, "kRdpMessageSizes has incorrect size");
 
@@ -174,6 +259,11 @@ namespace RdpGamepad
 		RdpGetStateResponse         mGetStateResponse;
 		RdpSetStateResponse         mSetStateResponse;
 		RdpGetCapabilitiesResponse  mGetCapabilitiesResponse;
+		RdpGetStateRequestDS4		mGetStateRequestDS4;
+		RdpPollStateRequestDS4		mPollStateRequestDS4;
+		RdpSetStateRequestDS4		mSetStateRequestDS4;
+		RdpGetStateResponseDS4		mGetStateResponseDS4;
+		RdpSetStateResponseDS4		mSetStateResponseDS4;
 
 		inline bool IsValid()
 		{

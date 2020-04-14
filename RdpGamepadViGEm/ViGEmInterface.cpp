@@ -153,6 +153,23 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 	vigem_target_ds4_update(mClient->GetHandle(), mTarget, report);
 }
 
+void ViGEmTargetDS4::SetGamepadState(const PadState& State)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+
+	DS4_REPORT report = {};
+	report.bThumbLX  = State.StickL.X;
+	report.bThumbLY  = State.StickL.Y;
+	report.bThumbRX  = State.StickR.X;
+	report.bThumbRY  = State.StickR.Y;
+	report.wButtons  = State.Buttons;
+	report.bSpecial  = State.SpecialButtons;
+	report.bTriggerL = State.AnalogButtons.L2;
+	report.bTriggerR = State.AnalogButtons.R2;
+
+	vigem_target_ds4_update(mClient->GetHandle(), mTarget, report);
+}
+
 bool ViGEmTargetDS4::GetVibration(XINPUT_VIBRATION& OutVibration)
 {
 	std::unique_lock<std::mutex> lock(mMutex);
@@ -161,6 +178,33 @@ bool ViGEmTargetDS4::GetVibration(XINPUT_VIBRATION& OutVibration)
 		OutVibration.wLeftMotorSpeed  = mPendingLargeMotor;
 		OutVibration.wRightMotorSpeed = mPendingSmallMotor;
 		mHasPendingVibration = false;
+		return true;
+	}
+	return false;
+}
+
+bool ViGEmTargetDS4::GetVibration(PadVibrationParam& OutVibration)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+	if (mHasPendingVibration)
+	{
+		OutVibration.LargeMotor = mPendingLargeMotor;
+		OutVibration.SmallMotor = mPendingSmallMotor;
+		mHasPendingVibration = false;
+		return true;
+	}
+	return false;
+}
+
+bool ViGEmTargetDS4::GetLightBarColor(PadColor& OutLightBarColor)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+	if (mHasPendingLightBar)
+	{
+		OutLightBarColor.R = mPendingLightBarR;
+		OutLightBarColor.G = mPendingLightBarG;
+		OutLightBarColor.B = mPendingLightBarG;
+		mHasPendingLightBar = false;
 		return true;
 	}
 	return false;

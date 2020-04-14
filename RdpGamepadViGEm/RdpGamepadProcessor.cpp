@@ -196,16 +196,28 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4()
 	}
 
 	// Request controller state and update vibration
-	if (!mRdpGamepadChannel->Send(RdpGamepad::RdpGetStateRequest::MakeRequest(0)))
+	if (!mRdpGamepadChannel->Send(RdpGamepad::RdpGetStateRequestDS4::MakeRequest(0)))
 	{
-		RdpGamepadTidy();
-		return;
+		if (!mRdpGamepadChannel->Send(RdpGamepad::RdpGetStateRequest::MakeRequest(0)))
+		{
+			RdpGamepadTidy();
+			return;
+		}
 	}
 
-	XINPUT_VIBRATION PendingVibes;
-	if (mViGEmTargetDS4->GetVibration(PendingVibes))
+	XINPUT_VIBRATION  PendingVibes360;
+	PadVibrationParam PendingVibesDS4;
+	if (mViGEmTargetDS4->GetVibration(PendingVibesDS4))
 	{
-		if (!mRdpGamepadChannel->Send(RdpGamepad::RdpSetStateRequest::MakeRequest(0, PendingVibes)))
+		if (!mRdpGamepadChannel->Send(RdpGamepad::RdpSetStateRequestDS4::MakeRequest(0, PendingVibesDS4)))
+		{
+			RdpGamepadTidy();
+			return;
+		}
+	}
+	else if (mViGEmTargetDS4->GetVibration(PendingVibes360))
+	{
+		if (!mRdpGamepadChannel->Send(RdpGamepad::RdpSetStateRequest::MakeRequest(0, PendingVibes360)))
 		{
 			RdpGamepadTidy();
 			return;
@@ -217,7 +229,22 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4()
 	while (mRdpGamepadChannel->Receive(&packet))
 	{
 		// Handle controller state
-		if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponse)
+		if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponseDS4)
+		{
+			if (packet.mGetStateResponse.mUserIndex == 0)
+			{
+				if (packet.mGetStateResponse.mResult == 0)
+				{
+					mViGEmTargetDS4->SetGamepadState(packet.mGetStateResponseDS4.mState);
+				}
+				else
+				{
+					mViGEmTargetDS4->SetGamepadState(XINPUT_GAMEPAD{0});
+				}
+				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
+			}
+		}
+		else if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponse)
 		{
 			if (packet.mGetStateResponse.mUserIndex == 0)
 			{

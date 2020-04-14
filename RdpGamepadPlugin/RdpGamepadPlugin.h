@@ -7,6 +7,7 @@
 #include "RdpGamepadPlugin_i.h"
 #include "RdpGamepadProtocol.h"
 #include "TimerManager.h"
+#include "ds4_pad.h"
 
 using namespace ATL;
 
@@ -53,6 +54,11 @@ private:
 	HRESULT HandleGetCapabilities(const RdpGamepad::RdpProtocolPacket& packet);
 
 	HRESULT SendControllerState(DWORD dwUserIndex);
+
+	HRESULT HandleGetStateDS4(const RdpGamepad::RdpProtocolPacket& packet);
+	HRESULT HandlePollStateDS4(const RdpGamepad::RdpProtocolPacket& packet);
+	HRESULT HandleSetStateDS4(const RdpGamepad::RdpProtocolPacket& packet);
+	HRESULT SendControllerStateDS4(DWORD dwUserIndex);
 
 	typedef HRESULT(CRdpGamepadChannel::*RdpProtocolHandlerFunction)(const RdpGamepad::RdpProtocolPacket& packet);
 	static RdpProtocolHandlerFunction sProtocolHandlers[static_cast<int>(RdpGamepad::RdpMessageType::MessageTypeCount)];

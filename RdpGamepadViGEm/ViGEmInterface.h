@@ -5,6 +5,7 @@
 
 #include <ViGEm/Client.h>
 #include <Xinput.h>
+#include <ds4_pad.h>
 
 class ViGEmClient : public std::enable_shared_from_this<ViGEmClient>
 {
@@ -53,6 +54,10 @@ public:
 	~ViGEmTargetDS4();
 	void SetGamepadState(const XINPUT_GAMEPAD& Gamepad);
 	bool GetVibration(XINPUT_VIBRATION& OutVibration);
+
+	void SetGamepadState(const PadState& State);
+	bool GetVibration(PadVibrationParam& OutVibration);
+	bool GetLightBarColor(PadColor& OutLightBarColor);
 
 private:
 	std::shared_ptr<ViGEmClient> mClient;
