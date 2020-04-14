@@ -141,10 +141,10 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 	uint8_t special_button = 0;	// TODO.
 
 	DS4_REPORT report = {};
-	report.bThumbLX  =  (Gamepad.sThumbLX + SHRT_MAX) / 0xff;	// left = 0, right = 255.
-	report.bThumbLY  = -(Gamepad.sThumbLY - SHRT_MAX) / 0xff;	// up   = 0, down  = 255.
-	report.bThumbRX  =  (Gamepad.sThumbRX + SHRT_MAX) / 0xff;	// left = 0, right = 255.
-	report.bThumbRY  = -(Gamepad.sThumbRY - SHRT_MAX) / 0xff;	// up   = 0, down  = 255.
+	report.bThumbLX  = static_cast<uint8_t>( ((Gamepad.sThumbLX + SHRT_MAX) / float(USHRT_MAX)) * 0xff);	// left = 0, right = 255.
+	report.bThumbLY  = static_cast<uint8_t>(-((Gamepad.sThumbLY - SHRT_MAX) / float(USHRT_MAX)) * 0xff);	// up   = 0, down  = 255.
+	report.bThumbRX  = static_cast<uint8_t>( ((Gamepad.sThumbRX + SHRT_MAX) / float(USHRT_MAX)) * 0xff);	// left = 0, right = 255.
+	report.bThumbRY  = static_cast<uint8_t>(-((Gamepad.sThumbRY - SHRT_MAX) / float(USHRT_MAX)) * 0xff);	// up   = 0, down  = 255.
 	report.wButtons  = button;
 	report.bSpecial  = special_button;
 	report.bTriggerL = Gamepad.bLeftTrigger;
