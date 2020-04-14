@@ -13,7 +13,7 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (United States) resources
+// âpåÍ (ïƒçë) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
@@ -52,7 +52,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_CONTROLLER        ICON                    "controller.ico"
+IDI_CONTROLLER          ICON                    "controller.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -65,10 +65,15 @@ BEGIN
     POPUP "__POPUP__"
     BEGIN
         MENUITEM "E&xit",                       ID_MENU_EXIT
+        POPUP "Contoller Type"
+        BEGIN
+            MENUITEM "Xbox 360",                    ID_CONTOLLERTYPE_XBOX360
+            MENUITEM "Dual Shock 4",                ID_CONTOLLERTYPE_DUALSHOCK4
+        END
     END
 END
 
-#endif    // English (United States) resources
+#endif    // âpåÍ (ïƒçë) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

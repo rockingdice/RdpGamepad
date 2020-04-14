@@ -210,6 +210,22 @@ private:
 				HideNotifyIcon();
 				PostQuitMessage(0);
 				break;
+
+			case ID_CONTOLLERTYPE_XBOX360:
+				if (mRdpProcessor.GetType() != CONTROLLER_360)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_360);
+				}
+				break;
+
+			case ID_CONTOLLERTYPE_DUALSHOCK4:
+				if (mRdpProcessor.GetType() != CONTROLLER_DS4)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_DS4);
+				}
+				break;
 			}
 			break;
 
