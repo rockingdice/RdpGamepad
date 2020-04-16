@@ -144,6 +144,10 @@ private:
 	{
 		HMENU hMenu = LoadMenu(mInstance, MAKEINTRESOURCE(IDR_POPUPMENU));
 		HMENU hPopupMenu = GetSubMenu(hMenu, 0);
+		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_XBOX360,            (mRdpProcessor.GetType() == CONTROLLER_360)     ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4,         (mRdpProcessor.GetType() == CONTROLLER_DS4)     ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE, (mRdpProcessor.GetType() == CONTROLLER_DS4_EMU) ? MF_CHECKED : MF_UNCHECKED);
+
 		POINT cursor;
 		GetCursorPos(&cursor);
 		TrackPopupMenuEx(hPopupMenu, TPM_RIGHTALIGN | TPM_RIGHTBUTTON, cursor.x, cursor.y, mWnd, nullptr);
@@ -226,8 +230,15 @@ private:
 					mRdpProcessor.Start(CONTROLLER_DS4);
 				}
 				break;
+
+			case ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE:
+				if (mRdpProcessor.GetType() != CONTROLLER_DS4_EMU)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_DS4_EMU);
+				}
+				break;
 			}
-			break;
 
 		default:
 			return DefWindowProc(mWnd, message, wParam, lParam);
