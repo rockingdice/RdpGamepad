@@ -145,6 +145,7 @@ private:
 		HMENU hMenu = LoadMenu(mInstance, MAKEINTRESOURCE(IDR_POPUPMENU));
 		HMENU hPopupMenu = GetSubMenu(hMenu, 0);
 		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_XBOX360,            (mRdpProcessor.GetType() == CONTROLLER_360)     ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_XBOX360_EMULATE,    (mRdpProcessor.GetType() == CONTROLLER_360_EMU) ? MF_CHECKED : MF_UNCHECKED); 
 		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4,         (mRdpProcessor.GetType() == CONTROLLER_DS4)     ? MF_CHECKED : MF_UNCHECKED);
 		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE, (mRdpProcessor.GetType() == CONTROLLER_DS4_EMU) ? MF_CHECKED : MF_UNCHECKED);
 
@@ -220,6 +221,14 @@ private:
 				{
 					mRdpProcessor.Stop();
 					mRdpProcessor.Start(CONTROLLER_360);
+				}
+				break;
+
+			case ID_CONTOLLERTYPE_XBOX360_EMULATE:
+				if (mRdpProcessor.GetType() != CONTROLLER_360_EMU)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_360_EMU);
 				}
 				break;
 

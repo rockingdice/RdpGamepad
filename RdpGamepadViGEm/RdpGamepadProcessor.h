@@ -15,9 +15,10 @@ class ViGEmTargetDS4;
 
 enum CONTROLLER_TYPE
 {
-	CONTROLLER_360      = 0,
-	CONTROLLER_DS4      = 1,
-	CONTROLLER_DS4_EMU  = 2,
+	CONTROLLER_360 = 0,		// XInput ---> XInput.
+	CONTROLLER_360_EMU,		// Dual Shock 4 ---> XInput.
+	CONTROLLER_DS4,			// Dual Shock 4 ---> Dual Shock 4.
+	CONTROLLER_DS4_EMU,		// XInput ---> Dual Shock 4.
 };
 
 class RdpGamepadProcessor
@@ -49,6 +50,7 @@ private:
 	void Run();
 	void RdpGamepadTidy();
 	void RdpGamepadProcess360();
+	void RdpGamepadProcess360Emulate();
 	void RdpGamepadProcessDS4();
 	void RdpGamepadProcessDS4Emulate();
 };

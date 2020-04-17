@@ -68,6 +68,7 @@ BEGIN
         POPUP "Contoller Type"
         BEGIN
             MENUITEM "Xbox 360",                    ID_CONTOLLERTYPE_XBOX360
+            MENUITEM "Xbox 360 Emulate",            ID_CONTOLLERTYPE_XBOX360_EMULATE
             MENUITEM "Dual Shock 4",                ID_CONTOLLERTYPE_DUALSHOCK4
             MENUITEM "Dual Shock 4 Emulate",        ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE
         END

@@ -58,6 +58,10 @@ void RdpGamepadProcessor::Run()
 				RdpGamepadProcess360();
 				break;
 
+			case CONTROLLER_360_EMU:
+				RdpGamepadProcess360Emulate();
+				break;
+
 			case CONTROLLER_DS4:
 				RdpGamepadProcessDS4();
 				break;
@@ -147,6 +151,93 @@ void RdpGamepadProcessor::RdpGamepadProcess360()
 				if (packet.mGetStateResponse.mResult == 0)
 				{
 					mViGEmTarget360->SetGamepadState(packet.mGetStateResponse.mState.Gamepad);
+				}
+				else
+				{
+					mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
+				}
+				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
+			}
+		}
+	}
+
+	// Remove stale controller data
+	if (mRdpGamepadPollTicks < mLastGetStateResponseTicks || (mRdpGamepadPollTicks - mLastGetStateResponseTicks) > 120) // Timeout in about 2 seconds
+	{
+		mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
+	}
+
+	// Check connection state
+	if (!mRdpGamepadChannel->IsOpen())
+	{
+		RdpGamepadTidy();
+	}
+}
+
+void RdpGamepadProcessor::RdpGamepadProcess360Emulate()
+{
+	++mRdpGamepadPollTicks;
+
+	// Try to open the channel if we don't have a channel open already
+	if (!mRdpGamepadChannel->IsOpen())
+	{
+		// Only try to reconnect every few seconds instead of every tick as WTSVirtualChannelOpen can take a bit long.
+		// I would probably be best if we called that outside of the critical section lock but for now this should
+		// really make things much better.
+		if (mRdpGamepadOpenRetry == 0)
+		{
+			if (!mRdpGamepadChannel->Open())
+			{
+				mRdpGamepadOpenRetry = 35; // Retry about every second
+				RdpGamepadTidy();
+				return;
+			}
+		}
+		else
+		{
+			--mRdpGamepadOpenRetry;
+			RdpGamepadTidy();
+			return;
+		}
+	}
+
+	//assert(mRdpGamepadChannel->IsOpen());
+	if (!mRdpGamepadConnected)
+	{
+		//assert(mViGEmTarget360 == nullptr)
+		mViGEmTarget360 = mViGEmClient->CreateControllerAs360();
+		mRdpGamepadConnected = true;
+	}
+
+	// Request controller state and update vibration
+	if (!mRdpGamepadChannel->Send(RdpGamepad::RdpGetStateRequestDS4::MakeRequest(0)))
+	{
+		RdpGamepadTidy();
+		return;
+	}
+
+	PadVibrationParam PendingVibesDS4;
+	if (mViGEmTarget360->GetVibration(PendingVibesDS4))
+	{
+		if (!mRdpGamepadChannel->Send(RdpGamepad::RdpSetStateRequestDS4::MakeRequest(0, PendingVibesDS4)))
+		{
+			RdpGamepadTidy();
+			return;
+		}
+	}
+
+	// Read all the pending messages
+	RdpGamepad::RdpProtocolPacket packet;
+	while (mRdpGamepadChannel->Receive(&packet))
+	{
+		// Handle controller state
+		if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponseDS4)
+		{
+			if (packet.mGetStateResponse.mUserIndex == 0)
+			{
+				if (packet.mGetStateResponse.mResult == 0)
+				{
+					mViGEmTarget360->SetGamepadState(packet.mGetStateResponseDS4.mState);
 				}
 				else
 				{

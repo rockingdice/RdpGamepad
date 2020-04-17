@@ -9,7 +9,7 @@
 
 namespace {
 
-constexpr uint8_t DPAD_MASK[] = {
+constexpr uint8_t DS4_DPAD_MASK[] = {
 	XINPUT_GAMEPAD_DPAD_UP,
 	XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_RIGHT,
 	XINPUT_GAMEPAD_DPAD_RIGHT,
@@ -20,7 +20,7 @@ constexpr uint8_t DPAD_MASK[] = {
 	XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_LEFT,
 };
 
-constexpr uint16_t BUTTON_MASK[] = {
+constexpr uint16_t DS4_BUTTON_MASK[] = {
 	XINPUT_GAMEPAD_X,
 	XINPUT_GAMEPAD_A,
 	XINPUT_GAMEPAD_B,
@@ -33,6 +33,33 @@ constexpr uint16_t BUTTON_MASK[] = {
 	XINPUT_GAMEPAD_START,
 	XINPUT_GAMEPAD_LEFT_THUMB,
 	XINPUT_GAMEPAD_RIGHT_THUMB,
+};
+
+constexpr uint16_t X360_DPAD_MASK[] = {
+	XUSB_GAMEPAD_DPAD_UP,
+	XUSB_GAMEPAD_DPAD_UP | XUSB_GAMEPAD_DPAD_RIGHT,
+	XUSB_GAMEPAD_DPAD_RIGHT,
+	XUSB_GAMEPAD_DPAD_DOWN | XUSB_GAMEPAD_DPAD_RIGHT,
+	XUSB_GAMEPAD_DPAD_DOWN,
+	XUSB_GAMEPAD_DPAD_DOWN | XUSB_GAMEPAD_DPAD_LEFT,
+	XUSB_GAMEPAD_DPAD_LEFT,
+	XUSB_GAMEPAD_DPAD_UP | XUSB_GAMEPAD_DPAD_LEFT,
+	0,
+};
+
+constexpr uint16_t X360_BUTTON_MASK[] = {
+	XUSB_GAMEPAD_X,
+	XUSB_GAMEPAD_A,
+	XUSB_GAMEPAD_B,
+	XUSB_GAMEPAD_Y,
+	XUSB_GAMEPAD_LEFT_SHOULDER,
+	XUSB_GAMEPAD_RIGHT_SHOULDER,
+	0,
+	0,
+	XUSB_GAMEPAD_BACK,
+	XUSB_GAMEPAD_START,
+	XUSB_GAMEPAD_LEFT_THUMB,
+	XUSB_GAMEPAD_RIGHT_THUMB
 };
 
 } // namespace
@@ -81,6 +108,52 @@ bool ViGEmTarget360::GetVibration(XINPUT_VIBRATION& OutVibration)
 	return false;
 }
 
+void ViGEmTarget360::SetGamepadState(const PadState& Gamepad)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+
+	uint16_t button = 0;
+	uint8_t dpad = uint8_t(Gamepad.Buttons & 0xf);
+	if (dpad > 8)
+	{ dpad = 8; }
+
+	button |= X360_DPAD_MASK[dpad];
+
+	for(auto i=0; i<12; ++i)
+	{
+		if (X360_BUTTON_MASK[i] == 0)
+		{ continue; }
+
+		auto mask = (1 << (i+4));
+		if ((Gamepad.Buttons & mask) == mask)
+		{ button |= X360_BUTTON_MASK[i]; }
+	}
+
+	XUSB_REPORT report;
+	report.sThumbLX      = int16_t( ((float(Gamepad.StickL.X) / float(255.0f)) * 2.0f - 1.0f) * SHRT_MAX);
+	report.sThumbLY      = int16_t(-((float(Gamepad.StickL.Y) / float(255.0f)) * 2.0f - 1.0f) * SHRT_MAX);
+	report.sThumbRX      = int16_t( ((float(Gamepad.StickR.X) / float(255.0f)) * 2.0f - 1.0f) * SHRT_MAX);
+	report.sThumbRY      = int16_t(-((float(Gamepad.StickR.Y) / float(255.0f)) * 2.0f - 1.0f) * SHRT_MAX);
+	report.bLeftTrigger  = Gamepad.AnalogButtons.L2;
+	report.bRightTrigger = Gamepad.AnalogButtons.R2;
+	report.wButtons      = button;
+
+	vigem_target_x360_update(mClient->GetHandle(), mTarget, report);
+}
+
+bool ViGEmTarget360::GetVibration(PadVibrationParam& OutVibration)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+	if (mHasPendingVibration)
+	{
+		OutVibration.LargeMotor = uint8_t((mPendingVibration.wLeftMotorSpeed  / float(USHRT_MAX)) * 0xff);
+		OutVibration.SmallMotor = uint8_t((mPendingVibration.wRightMotorSpeed / float(USHRT_MAX)) * 0xff);
+		mHasPendingVibration = false;
+		return true;
+	}
+	return false;
+}
+
 void ViGEmTarget360::StaticControllerNotification(PVIGEM_CLIENT Client, PVIGEM_TARGET Target, UCHAR LargeMotor, UCHAR SmallMotor, UCHAR LedNumber, LPVOID Context)
 {
 	auto pThis = static_cast<ViGEmTarget360*>(Context);
@@ -115,7 +188,7 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 	uint8_t dpad = 0x8;
 	for(auto i=7; i>=0; i--)
 	{
-		if ((Gamepad.wButtons & DPAD_MASK[i]) == DPAD_MASK[i])
+		if ((Gamepad.wButtons & DS4_DPAD_MASK[i]) == DS4_DPAD_MASK[i])
 		{
 			dpad = i;
 			break;
@@ -125,10 +198,10 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 	uint16_t button = dpad;
 	for(auto i=0; i<12; ++i)
 	{
-		if (BUTTON_MASK[i] == 0)
+		if (DS4_BUTTON_MASK[i] == 0)
 		{ continue; }
 
-		if ((Gamepad.wButtons & BUTTON_MASK[i]) == BUTTON_MASK[i])
+		if ((Gamepad.wButtons & DS4_BUTTON_MASK[i]) == DS4_BUTTON_MASK[i])
 		{ button |= (1 << (i + 4)); }
 	}
 

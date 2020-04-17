@@ -33,6 +33,9 @@ public:
 	void SetGamepadState(const XINPUT_GAMEPAD& Gamepad);
 	bool GetVibration(XINPUT_VIBRATION& OutVibration);
 
+	void SetGamepadState(const PadState& Gamepad);
+	bool GetVibration(PadVibrationParam& OutVibration);
+
 private:
 	std::shared_ptr<ViGEmClient> mClient;
 	PVIGEM_TARGET mTarget;
