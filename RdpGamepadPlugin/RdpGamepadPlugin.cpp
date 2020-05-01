@@ -5,6 +5,7 @@
 #include "RdpGamepadPlugin.h"
 #include "RdpGamepadProtocol.h"
 #include "TimerManager.h"
+#include "DynamicXInput.h"
 
 template <typename T, std::size_t N>
 constexpr std::size_t array_size(T(&)[N]) { return N; }
@@ -142,7 +143,7 @@ HRESULT CRdpGamepadChannel::HandleSetState(const RdpGamepad::RdpProtocolPacket& 
 {
 	const auto& request = packet.mSetStateRequest;
 
-	DWORD result = XInputSetState(request.mUserIndex, const_cast<XINPUT_VIBRATION*>(&request.mVibration));
+	DWORD result = ThunkXInputSetState(request.mUserIndex, const_cast<XINPUT_VIBRATION*>(&request.mVibration));
 
 	auto response = RdpGamepad::RdpSetStateResponse::MakeResponse(request.mUserIndex, result);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
@@ -153,7 +154,7 @@ HRESULT CRdpGamepadChannel::HandleGetCapabilities(const RdpGamepad::RdpProtocolP
 	const auto& request = packet.mGetCapabilitiesRequest;
 
 	XINPUT_CAPABILITIES capabilities;
-	DWORD result = XInputGetCapabilities(request.mUserIndex, request.mFlags, &capabilities);
+	DWORD result = ThunkXInputGetCapabilities(request.mUserIndex, request.mFlags, &capabilities);
 
 	auto response = RdpGamepad::RdpGetCapabilitiesResponse::MakeResponse(request.mUserIndex, result, capabilities);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
@@ -162,7 +163,7 @@ HRESULT CRdpGamepadChannel::HandleGetCapabilities(const RdpGamepad::RdpProtocolP
 HRESULT CRdpGamepadChannel::SendControllerState(DWORD dwUserIndex)
 {
 	XINPUT_STATE state;
-	DWORD result = XInputGetState(dwUserIndex, &state);
+	DWORD result = ThunkXInputGetState(dwUserIndex, &state);
 
 	auto response = RdpGamepad::RdpGetStateResponse::MakeResponse(dwUserIndex, result, state);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
