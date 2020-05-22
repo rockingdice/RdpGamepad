@@ -26,7 +26,7 @@ void RdpGamepadProcessor::Start(CONTROLLER_TYPE type)
 void RdpGamepadProcessor::Stop()
 {
 	{
-		std::unique_lock<std::mutex> lock{mMutex};
+		std::unique_lock<std::recursive_mutex> lock{mMutex};
 		mKeepRunning = false;
 	}
 	mThread.join();
@@ -43,7 +43,7 @@ void RdpGamepadProcessor::Run()
 	TimerEvent = CreateWaitableTimerEx(NULL, NULL, 0, TIMER_ALL_ACCESS);
 	SetWaitableTimer(TimerEvent, &DueTime, PollFrequency, NULL, NULL, false);
 
-	std::unique_lock<std::mutex> lock{mMutex};
+	std::unique_lock<std::recursive_mutex> lock{mMutex};
 	while (mKeepRunning)
 	{
 		mMutex.unlock();
@@ -120,6 +120,7 @@ void RdpGamepadProcessor::RdpGamepadProcess360()
 		//assert(mViGEmTarget360 == nullptr)
 		mViGEmTarget360 = mViGEmClient->CreateControllerAs360();
 		mRdpGamepadConnected = true;
+		mErrorCode = S_OK;
 	}
 
 	// Request controller state and update vibration
@@ -155,6 +156,7 @@ void RdpGamepadProcessor::RdpGamepadProcess360()
 				else
 				{
 					mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
+					mErrorCode = packet.mGetStateResponse.mResult;
 				}
 				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 			}
@@ -207,6 +209,7 @@ void RdpGamepadProcessor::RdpGamepadProcess360Emulate()
 		//assert(mViGEmTarget360 == nullptr)
 		mViGEmTarget360 = mViGEmClient->CreateControllerAs360();
 		mRdpGamepadConnected = true;
+		mErrorCode = S_OK;
 	}
 
 	// Request controller state and update vibration
@@ -233,18 +236,16 @@ void RdpGamepadProcessor::RdpGamepadProcess360Emulate()
 		// Handle controller state
 		if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponseDS4)
 		{
-			if (packet.mGetStateResponse.mUserIndex == 0)
+			if (packet.mGetStateResponseDS4.mResult == 0)
 			{
-				if (packet.mGetStateResponse.mResult == 0)
-				{
-					mViGEmTarget360->SetGamepadState(packet.mGetStateResponseDS4.mState);
-				}
-				else
-				{
-					mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
-				}
-				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
+				mViGEmTarget360->SetGamepadState(packet.mGetStateResponseDS4.mState);
 			}
+			else
+			{
+				mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
+				mErrorCode = packet.mGetCapabilitiesResponse.mResult;
+			}
+			mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 		}
 	}
 
@@ -294,6 +295,7 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4()
 		//assert(mViGEmTargetDS4 == nullptr)
 		mViGEmTargetDS4 = mViGEmClient->CreateControllerAsDS4();
 		mRdpGamepadConnected = true;
+		mErrorCode = S_OK;
 	}
 
 	// Request controller state and update vibration
@@ -320,18 +322,16 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4()
 		// Handle controller state
 		if (packet.mHeader.mMessageType == RdpGamepad::RdpMessageType::GetStateResponseDS4)
 		{
-			if (packet.mGetStateResponse.mUserIndex == 0)
+			if (packet.mGetStateResponseDS4.mResult == 0)
 			{
-				if (packet.mGetStateResponse.mResult == 0)
-				{
-					mViGEmTargetDS4->SetGamepadState(packet.mGetStateResponseDS4.mState);
-				}
-				else
-				{
-					mViGEmTargetDS4->SetGamepadState(XINPUT_GAMEPAD{0});
-				}
-				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
+				mViGEmTargetDS4->SetGamepadState(packet.mGetStateResponseDS4.mState);
 			}
+			else
+			{
+				mViGEmTargetDS4->SetGamepadState(XINPUT_GAMEPAD{0});
+				mErrorCode = packet.mGetStateResponseDS4.mResult;
+			}
+			mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 		}
 	}
 
@@ -381,6 +381,7 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4Emulate()
 		//assert(mViGEmTargetDS4 == nullptr)
 		mViGEmTargetDS4 = mViGEmClient->CreateControllerAsDS4();
 		mRdpGamepadConnected = true;
+		mErrorCode = S_OK;
 	}
 
 	// Request controller state and update vibration
@@ -416,6 +417,7 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4Emulate()
 				else
 				{
 					mViGEmTargetDS4->SetGamepadState(XINPUT_GAMEPAD{0});
+					mErrorCode = packet.mGetStateResponseDS4.mResult;
 				}
 				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 			}

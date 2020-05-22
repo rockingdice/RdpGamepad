@@ -41,7 +41,7 @@ private:
 	PVIGEM_TARGET mTarget;
 	XINPUT_VIBRATION mPendingVibration{0};
 	bool mHasPendingVibration = false;
-	std::mutex mMutex;
+	std::recursive_mutex mMutex;
 
 	static void CALLBACK StaticControllerNotification(PVIGEM_CLIENT Client, PVIGEM_TARGET Target, UCHAR LargeMotor, UCHAR SmallMotor, UCHAR LedNumber, LPVOID Context);
 };
@@ -72,7 +72,7 @@ private:
 	uint8_t mPendingLightBarB = 0;
 	bool mHasPendingVibration = false;
 	bool mHasPendingLightBar = false;
-	std::mutex mMutex;
+	std::recursive_mutex mMutex;
 
 	static void CALLBACK StaticControllerNotification(PVIGEM_CLIENT Client, PVIGEM_TARGET Target, UCHAR LargeMotor, UCHAR SmallMotor, DS4_LIGHTBAR_COLOR LightbarColor, LPVOID UserData);
 };

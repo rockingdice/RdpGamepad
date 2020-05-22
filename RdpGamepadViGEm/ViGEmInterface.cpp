@@ -74,7 +74,7 @@ ViGEmTarget360::ViGEmTarget360(std::shared_ptr<ViGEmClient> Client)
 
 ViGEmTarget360::~ViGEmTarget360()
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	vigem_target_x360_unregister_notification(mTarget);
 	vigem_target_remove(mClient->GetHandle(), mTarget);
@@ -83,7 +83,7 @@ ViGEmTarget360::~ViGEmTarget360()
 
 void ViGEmTarget360::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	XUSB_REPORT report;
 	report.wButtons = Gamepad.wButtons;
@@ -98,7 +98,7 @@ void ViGEmTarget360::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 
 bool ViGEmTarget360::GetVibration(XINPUT_VIBRATION& OutVibration)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 	if (mHasPendingVibration)
 	{
 		OutVibration = mPendingVibration;
@@ -110,7 +110,7 @@ bool ViGEmTarget360::GetVibration(XINPUT_VIBRATION& OutVibration)
 
 void ViGEmTarget360::SetGamepadState(const PadState& Gamepad)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	uint16_t button = 0;
 	uint8_t dpad = uint8_t(Gamepad.Buttons & 0xf);
@@ -143,7 +143,7 @@ void ViGEmTarget360::SetGamepadState(const PadState& Gamepad)
 
 bool ViGEmTarget360::GetVibration(PadVibrationParam& OutVibration)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 	if (mHasPendingVibration)
 	{
 		OutVibration.LargeMotor = uint8_t((mPendingVibration.wLeftMotorSpeed  / float(USHRT_MAX)) * 0xff);
@@ -158,7 +158,7 @@ void ViGEmTarget360::StaticControllerNotification(PVIGEM_CLIENT Client, PVIGEM_T
 {
 	auto pThis = static_cast<ViGEmTarget360*>(Context);
 
-	std::unique_lock<std::mutex> lock(pThis->mMutex);
+	std::unique_lock<std::recursive_mutex> lock(pThis->mMutex);
 	pThis->mPendingVibration.wLeftMotorSpeed = LargeMotor << 8;
 	pThis->mPendingVibration.wRightMotorSpeed = SmallMotor << 8;
 	pThis->mHasPendingVibration = true;
@@ -174,7 +174,7 @@ ViGEmTargetDS4::ViGEmTargetDS4(std::shared_ptr<ViGEmClient> Client)
 
 ViGEmTargetDS4::~ViGEmTargetDS4()
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	vigem_target_ds4_unregister_notification(mTarget);
 	vigem_target_remove(mClient->GetHandle(), mTarget);
@@ -183,7 +183,7 @@ ViGEmTargetDS4::~ViGEmTargetDS4()
 
 void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	uint8_t dpad = 0x8;
 	for(auto i=7; i>=0; i--)
@@ -228,7 +228,7 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 
 void ViGEmTargetDS4::SetGamepadState(const PadState& State)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
 	DS4_REPORT report = {};
 	report.bThumbLX  = State.StickL.X;
@@ -245,7 +245,7 @@ void ViGEmTargetDS4::SetGamepadState(const PadState& State)
 
 bool ViGEmTargetDS4::GetVibration(XINPUT_VIBRATION& OutVibration)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 	if (mHasPendingVibration)
 	{
 		OutVibration.wLeftMotorSpeed  = mPendingLargeMotor;
@@ -258,7 +258,7 @@ bool ViGEmTargetDS4::GetVibration(XINPUT_VIBRATION& OutVibration)
 
 bool ViGEmTargetDS4::GetVibration(PadVibrationParam& OutVibration)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 	if (mHasPendingVibration)
 	{
 		OutVibration.LargeMotor = mPendingLargeMotor;
@@ -271,7 +271,7 @@ bool ViGEmTargetDS4::GetVibration(PadVibrationParam& OutVibration)
 
 bool ViGEmTargetDS4::GetLightBarColor(PadColor& OutLightBarColor)
 {
-	std::unique_lock<std::mutex> lock(mMutex);
+	std::unique_lock<std::recursive_mutex> lock(mMutex);
 	if (mHasPendingLightBar)
 	{
 		OutLightBarColor.R = mPendingLightBarR;
@@ -287,7 +287,7 @@ void ViGEmTargetDS4::StaticControllerNotification(PVIGEM_CLIENT Client, PVIGEM_T
 {
 	auto pThis = static_cast<ViGEmTargetDS4*>(UserData);
 
-	std::unique_lock<std::mutex> lock(pThis->mMutex);
+	std::unique_lock<std::recursive_mutex> lock(pThis->mMutex);
 	pThis->mPendingLargeMotor	= LargeMotor;
 	pThis->mPendingSmallMotor	= SmallMotor;
 	pThis->mPendingLightBarR	= LightBarColor.Red;

@@ -50,6 +50,7 @@ private:
 	HINSTANCE mInstance = nullptr;
 	HWND mWnd = nullptr;
 	HANDLE mGlobalMutex = nullptr;
+	wchar_t mState[128];
 
 	bool CreateSingleAppMutex()
 	{
@@ -144,10 +145,15 @@ private:
 	{
 		HMENU hMenu = LoadMenu(mInstance, MAKEINTRESOURCE(IDR_POPUPMENU));
 		HMENU hPopupMenu = GetSubMenu(hMenu, 0);
-		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_XBOX360,            (mRdpProcessor.GetType() == CONTROLLER_360)     ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_XBOX360_EMULATE,    (mRdpProcessor.GetType() == CONTROLLER_360_EMU) ? MF_CHECKED : MF_UNCHECKED); 
-		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4,         (mRdpProcessor.GetType() == CONTROLLER_DS4)     ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(hPopupMenu, ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE, (mRdpProcessor.GetType() == CONTROLLER_DS4_EMU) ? MF_CHECKED : MF_UNCHECKED);
+
+		MENUITEMINFOW info = {};
+		GetState(info);
+		SetMenuItemInfoW(hPopupMenu, ID_CONNECTION_STATE, FALSE, &info);
+		CheckMenuRadioItem(hPopupMenu, 
+			ID_CONTOLLERTYPE_XBOX360,
+			ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE,
+			mRdpProcessor.GetType() + ID_CONTOLLERTYPE_XBOX360,
+			 MF_BYCOMMAND);
 
 		POINT cursor;
 		GetCursorPos(&cursor);
@@ -247,12 +253,28 @@ private:
 					mRdpProcessor.Start(CONTROLLER_DS4_EMU);
 				}
 				break;
+
+			default:
+				break;
 			}
 
 		default:
 			return DefWindowProc(mWnd, message, wParam, lParam);
 		}
 		return 0;
+	}
+
+	void GetState(MENUITEMINFOW& result)
+	{
+		swprintf_s(mState, L"State : %s (0x%x)",
+			mRdpProcessor.IsConnected() ? L"OK" : L"NG",
+			mRdpProcessor.GetErrorCode());
+
+		result.cbSize		= sizeof(result);
+		result.fMask		= MIIM_STATE | MIIM_STRING;
+		result.fState		= MFS_ENABLED;
+		result.dwTypeData	= mState;
+		result.cch			= UINT(wcslen(mState));
 	}
 };
 
