@@ -243,7 +243,7 @@ void RdpGamepadProcessor::RdpGamepadProcess360Emulate()
 			else
 			{
 				mViGEmTarget360->SetGamepadState(XINPUT_GAMEPAD{0});
-				mErrorCode = packet.mGetCapabilitiesResponse.mResult;
+				mErrorCode = packet.mGetStateResponseDS4.mResult;
 			}
 			mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 		}
@@ -417,7 +417,7 @@ void RdpGamepadProcessor::RdpGamepadProcessDS4Emulate()
 				else
 				{
 					mViGEmTargetDS4->SetGamepadState(XINPUT_GAMEPAD{0});
-					mErrorCode = packet.mGetStateResponseDS4.mResult;
+					mErrorCode = packet.mGetStateResponse.mResult;
 				}
 				mLastGetStateResponseTicks = mRdpGamepadPollTicks;
 			}
