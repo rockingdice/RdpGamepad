@@ -62,6 +62,35 @@ constexpr uint16_t X360_BUTTON_MASK[] = {
 	XUSB_GAMEPAD_RIGHT_THUMB
 };
 
+uint8_t ToDS4Dpad(uint16_t buttonMask)
+{
+	auto N = (buttonMask & XINPUT_GAMEPAD_DPAD_UP)    == XINPUT_GAMEPAD_DPAD_UP;
+	auto S = (buttonMask & XINPUT_GAMEPAD_DPAD_DOWN)  == XINPUT_GAMEPAD_DPAD_DOWN;
+	auto W = (buttonMask & XINPUT_GAMEPAD_DPAD_LEFT)  == XINPUT_GAMEPAD_DPAD_LEFT;
+	auto E = (buttonMask & XINPUT_GAMEPAD_DPAD_RIGHT) == XINPUT_GAMEPAD_DPAD_RIGHT;
+
+	uint8_t result = PAD_BUTTON_DPAD_NONE;
+
+	if (N && E)
+	{ result = PAD_BUTTON_DPAD_NORTHEAST; }
+	else if (N && W)
+	{ result = PAD_BUTTON_DPAD_NORTHWEST; }
+	else if (S && E)
+	{ result = PAD_BUTTON_DPAD_SOUTHEAST; }
+	else if (S && W)
+	{ result = PAD_BUTTON_DPAD_SOUTHWEST; }
+	else if (N)
+	{ result = PAD_BUTTON_DPAD_NORTH; }
+	else if (S)
+	{ result = PAD_BUTTON_DPAD_SOUTH; }
+	else if (W)
+	{ result = PAD_BUTTON_DPAD_WEST; }
+	else if (E)
+	{ result = PAD_BUTTON_DPAD_EAST; }
+
+	return result;
+}
+
 } // namespace
 
 ViGEmTarget360::ViGEmTarget360(std::shared_ptr<ViGEmClient> Client)
@@ -185,15 +214,7 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 {
 	std::unique_lock<std::recursive_mutex> lock(mMutex);
 
-	uint8_t dpad = 0x8;
-	for(auto i=7; i>=0; i--)
-	{
-		if ((Gamepad.wButtons & DS4_DPAD_MASK[i]) == DS4_DPAD_MASK[i])
-		{
-			dpad = i;
-			break;
-		}
-	}
+	uint8_t dpad = ToDS4Dpad(Gamepad.wButtons);
 
 	uint16_t button = dpad;
 	for(auto i=0; i<12; ++i)
@@ -209,7 +230,7 @@ void ViGEmTargetDS4::SetGamepadState(const XINPUT_GAMEPAD& Gamepad)
 	{ button |= DS4_BUTTON_TRIGGER_LEFT; }
 
 	if (Gamepad.bRightTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-	{ button |= DS4_BUTTON_THUMB_RIGHT; }
+	{ button |= DS4_BUTTON_TRIGGER_RIGHT; }
 
 	uint8_t special_button = 0;	// TODO.
 
