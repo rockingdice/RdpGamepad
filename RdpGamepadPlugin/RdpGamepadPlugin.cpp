@@ -5,6 +5,7 @@
 #include "RdpGamepadPlugin.h"
 #include "RdpGamepadProtocol.h"
 #include "TimerManager.h"
+#include "DynamicXInput.h"
 
 template <typename T, std::size_t N>
 constexpr std::size_t array_size(T(&)[N]) { return N; }
@@ -19,6 +20,11 @@ CRdpGamepadChannel::RdpProtocolHandlerFunction CRdpGamepadChannel::sProtocolHand
 	nullptr,										// GetStateResponse
 	nullptr,										// SetStateResponse
 	nullptr,										// GetCapabilitiesResponse
+	&CRdpGamepadChannel::HandleGetStateDS4,			// GetStateRequestDS4,
+	&CRdpGamepadChannel::HandlePollStateDS4,		// PollStateRequestDS4,
+	&CRdpGamepadChannel::HandleSetStateDS4,			// SetStateRequestDS4,
+	nullptr,										// GetStateResponseDS4,
+	nullptr,										// SetStateResponseDS4,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -137,7 +143,7 @@ HRESULT CRdpGamepadChannel::HandleSetState(const RdpGamepad::RdpProtocolPacket& 
 {
 	const auto& request = packet.mSetStateRequest;
 
-	DWORD result = XInputSetState(request.mUserIndex, const_cast<XINPUT_VIBRATION*>(&request.mVibration));
+	DWORD result = ThunkXInputSetState(request.mUserIndex, const_cast<XINPUT_VIBRATION*>(&request.mVibration));
 
 	auto response = RdpGamepad::RdpSetStateResponse::MakeResponse(request.mUserIndex, result);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
@@ -148,7 +154,7 @@ HRESULT CRdpGamepadChannel::HandleGetCapabilities(const RdpGamepad::RdpProtocolP
 	const auto& request = packet.mGetCapabilitiesRequest;
 
 	XINPUT_CAPABILITIES capabilities;
-	DWORD result = XInputGetCapabilities(request.mUserIndex, request.mFlags, &capabilities);
+	DWORD result = ThunkXInputGetCapabilities(request.mUserIndex, request.mFlags, &capabilities);
 
 	auto response = RdpGamepad::RdpGetCapabilitiesResponse::MakeResponse(request.mUserIndex, result, capabilities);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
@@ -157,8 +163,52 @@ HRESULT CRdpGamepadChannel::HandleGetCapabilities(const RdpGamepad::RdpProtocolP
 HRESULT CRdpGamepadChannel::SendControllerState(DWORD dwUserIndex)
 {
 	XINPUT_STATE state;
-	DWORD result = XInputGetState(dwUserIndex, &state);
+	DWORD result = ThunkXInputGetState(dwUserIndex, &state);
 
 	auto response = RdpGamepad::RdpGetStateResponse::MakeResponse(dwUserIndex, result, state);
+	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
+}
+
+
+HRESULT CRdpGamepadChannel::HandleGetStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mGetStateRequest;
+
+	return SendControllerStateDS4(request.mUserIndex);
+}
+
+HRESULT CRdpGamepadChannel::HandlePollStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mPollStateRequest;
+
+	HRESULT hr = SendControllerStateDS4(request.mUserIndex);
+	if (SUCCEEDED(hr))
+	{
+		DWORD dwUserIndex = request.mUserIndex;
+		TimerManager::Get().SetTimer(mTimerPoll, [dwUserIndex, this]() { SendControllerState(dwUserIndex); }, std::chrono::seconds(1) / 30, true);
+		TimerManager::Get().SetTimer(mTimerPollTimeout, [this]() { TimerManager::Get().ClearTimer(mTimerPoll); }, std::chrono::seconds(2), false);
+	}
+
+	return S_OK;
+}
+
+HRESULT CRdpGamepadChannel::HandleSetStateDS4(const RdpGamepad::RdpProtocolPacket& packet)
+{
+	const auto& request = packet.mSetStateRequestDS4;
+
+	auto ret = PadSetVibration(request.mVibration);
+	DWORD result = (ret) ? S_OK : E_FAIL;
+
+	auto response = RdpGamepad::RdpSetStateResponseDS4::MakeResponse(request.mUserIndex, result);
+	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
+}
+
+HRESULT CRdpGamepadChannel::SendControllerStateDS4(DWORD dwUserIndex)
+{
+	PadState state;
+	auto ret = PadGetState(state);
+	DWORD result = (ret) ? S_OK : E_FAIL;
+
+	auto response = RdpGamepad::RdpGetStateResponseDS4::MakeResponse(dwUserIndex, result, state);
 	return mChannel->Write(sizeof(response), reinterpret_cast<BYTE*>(&response), nullptr);
 }

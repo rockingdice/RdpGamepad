@@ -50,6 +50,7 @@ private:
 	HINSTANCE mInstance = nullptr;
 	HWND mWnd = nullptr;
 	HANDLE mGlobalMutex = nullptr;
+	wchar_t mState[128];
 
 	bool CreateSingleAppMutex()
 	{
@@ -144,6 +145,16 @@ private:
 	{
 		HMENU hMenu = LoadMenu(mInstance, MAKEINTRESOURCE(IDR_POPUPMENU));
 		HMENU hPopupMenu = GetSubMenu(hMenu, 0);
+
+		MENUITEMINFOW info = {};
+		GetState(info);
+		SetMenuItemInfoW(hPopupMenu, ID_CONNECTION_STATE, FALSE, &info);
+		CheckMenuRadioItem(hPopupMenu, 
+			ID_CONTOLLERTYPE_XBOX360,
+			ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE,
+			mRdpProcessor.GetType() + ID_CONTOLLERTYPE_XBOX360,
+			 MF_BYCOMMAND);
+
 		POINT cursor;
 		GetCursorPos(&cursor);
 		TrackPopupMenuEx(hPopupMenu, TPM_RIGHTALIGN | TPM_RIGHTBUTTON, cursor.x, cursor.y, mWnd, nullptr);
@@ -210,13 +221,60 @@ private:
 				HideNotifyIcon();
 				PostQuitMessage(0);
 				break;
+
+			case ID_CONTOLLERTYPE_XBOX360:
+				if (mRdpProcessor.GetType() != CONTROLLER_360)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_360);
+				}
+				break;
+
+			case ID_CONTOLLERTYPE_XBOX360_EMULATE:
+				if (mRdpProcessor.GetType() != CONTROLLER_360_EMU)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_360_EMU);
+				}
+				break;
+
+			case ID_CONTOLLERTYPE_DUALSHOCK4:
+				if (mRdpProcessor.GetType() != CONTROLLER_DS4)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_DS4);
+				}
+				break;
+
+			case ID_CONTOLLERTYPE_DUALSHOCK4_EMULATE:
+				if (mRdpProcessor.GetType() != CONTROLLER_DS4_EMU)
+				{
+					mRdpProcessor.Stop();
+					mRdpProcessor.Start(CONTROLLER_DS4_EMU);
+				}
+				break;
+
+			default:
+				break;
 			}
-			break;
 
 		default:
 			return DefWindowProc(mWnd, message, wParam, lParam);
 		}
 		return 0;
+	}
+
+	void GetState(MENUITEMINFOW& result)
+	{
+		swprintf_s(mState, L"State : %s (0x%x)",
+			mRdpProcessor.IsConnected() ? L"OK" : L"NG",
+			mRdpProcessor.GetErrorCode());
+
+		result.cbSize		= sizeof(result);
+		result.fMask		= MIIM_STATE | MIIM_STRING;
+		result.fState		= MFS_ENABLED;
+		result.dwTypeData	= mState;
+		result.cch			= UINT(wcslen(mState));
 	}
 };
 
